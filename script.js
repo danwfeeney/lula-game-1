@@ -1,12 +1,12 @@
 class HideAndSeekGame {
     constructor() {
         this.gameState = 'waiting'; // waiting, countdown, playing, gameOver
-        this.difficulty = 'easy'; // easy, medium, hard
+        this.difficulty = 'extreme'; // easy, medium, hard, extreme
         this.difficultySettings = {
-            easy: { time: 80, label: 'Easy' },
-            medium: { time: 70, label: 'Medium' },
-            hard: { time: 60, label: 'Hard' },
-            extreme: { time: 30, label: 'Extreme' }
+            easy: { time: 70, label: 'Easy' },
+            medium: { time: 60, label: 'Medium' },
+            hard: { time: 50, label: 'Hard' },
+            extreme: { time: 20, label: 'Extreme' }
         };
         this.timeLeft = this.difficultySettings[this.difficulty].time;
         this.maxTime = this.difficultySettings[this.difficulty].time;
