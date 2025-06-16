@@ -5,7 +5,8 @@ class HideAndSeekGame {
         this.difficultySettings = {
             easy: { time: 80, label: 'Easy' },
             medium: { time: 70, label: 'Medium' },
-            hard: { time: 60, label: 'Hard' }
+            hard: { time: 60, label: 'Hard' },
+            extreme: { time: 30, label: 'Extreme' }
         };
         this.timeLeft = this.difficultySettings[this.difficulty].time;
         this.maxTime = this.difficultySettings[this.difficulty].time;
