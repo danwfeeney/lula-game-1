@@ -381,15 +381,21 @@ class HideAndSeekGame {
             this.timer = null;
         }
         
-        // Show all remaining characters at end
-        this.hiddenCharacters.forEach(character => {
-            if (!character.classList.contains('found')) {
-                character.classList.remove('peek');
-                character.classList.add('visible');
-                character.style.opacity = '0.5';
-                character.style.filter = 'none';
-            }
-        });
+        // Handle different end game scenarios
+        if (reason === 'timeout') {
+            // Explode unfound characters
+            this.explodeUnfoundCharacters();
+        } else {
+            // Show all remaining characters normally for completion
+            this.hiddenCharacters.forEach(character => {
+                if (!character.classList.contains('found')) {
+                    character.classList.remove('peek');
+                    character.classList.add('visible');
+                    character.style.opacity = '0.5';
+                    character.style.filter = 'none';
+                }
+            });
+        }
         
         // Remove game area effects
         this.gameArea.style.boxShadow = '';
@@ -397,7 +403,160 @@ class HideAndSeekGame {
         this.timerElement.style.animation = '';
         
         // Show game over screen
-        setTimeout(() => this.showGameOverScreen(reason), 1000);
+        setTimeout(() => this.showGameOverScreen(reason), reason === 'timeout' ? 2000 : 1000);
+    }
+    
+    explodeUnfoundCharacters() {
+        const unfoundCharacters = Array.from(this.hiddenCharacters).filter(character => 
+            !character.classList.contains('found')
+        );
+        
+        unfoundCharacters.forEach((character, index) => {
+            setTimeout(() => {
+                // Make character visible first
+                character.classList.remove('peek');
+                character.classList.add('visible');
+                character.style.opacity = '1';
+                character.style.filter = 'none';
+                
+                // Get character position
+                const rect = character.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                const y = rect.top + rect.height / 2;
+                
+                // Create explosion effect
+                this.createCharacterExplosion(x, y);
+                
+                // Hide character after explosion starts
+                setTimeout(() => {
+                    character.style.opacity = '0';
+                }, 300);
+                
+            }, index * 200); // Stagger explosions
+        });
+    }
+    
+    createCharacterExplosion(x, y) {
+        // Create explosion container
+        const explosionContainer = document.createElement('div');
+        explosionContainer.style.cssText = `
+            position: fixed;
+            left: ${x}px;
+            top: ${y}px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1001;
+        `;
+        document.body.appendChild(explosionContainer);
+        
+        // Create explosion particles
+        const particleCount = 8;
+        const colors = ['#ff4444', '#ff8800', '#ffaa00', '#ff6600'];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            const angle = (i / particleCount) * Math.PI * 2;
+            const velocity = Math.random() * 80 + 40;
+            const size = Math.random() * 8 + 6;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            particle.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                background: ${color};
+                border-radius: 50%;
+                left: 0;
+                top: 0;
+                box-shadow: 0 0 8px ${color};
+            `;
+            
+            explosionContainer.appendChild(particle);
+            
+            // Animate particle
+            const deltaX = Math.cos(angle) * velocity;
+            const deltaY = Math.sin(angle) * velocity;
+            
+            particle.animate([
+                { 
+                    transform: 'translate(0, 0) scale(1)',
+                    opacity: 1
+                },
+                { 
+                    transform: `translate(${deltaX}px, ${deltaY}px) scale(0)`,
+                    opacity: 0
+                }
+            ], {
+                duration: 600,
+                easing: 'ease-out'
+            }).addEventListener('finish', () => {
+                particle.remove();
+            });
+        }
+        
+        // Create flash effect
+        const flash = document.createElement('div');
+        flash.textContent = '💥';
+        flash.style.cssText = `
+            position: absolute;
+            left: 0;
+            top: 0;
+            transform: translate(-50%, -50%);
+            font-size: 30px;
+            z-index: 1002;
+        `;
+        explosionContainer.appendChild(flash);
+        
+        flash.animate([
+            { 
+                transform: 'translate(-50%, -50%) scale(0)',
+                opacity: 0
+            },
+            { 
+                transform: 'translate(-50%, -50%) scale(1.5)',
+                opacity: 1
+            },
+            { 
+                transform: 'translate(-50%, -50%) scale(0.5)',
+                opacity: 0
+            }
+        ], {
+            duration: 800,
+            easing: 'ease-out'
+        }).addEventListener('finish', () => {
+            flash.remove();
+        });
+        
+        // Play explosion sound
+        this.playExplosionSound();
+        
+        // Remove container after animation
+        setTimeout(() => {
+            if (explosionContainer.parentNode) {
+                explosionContainer.remove();
+            }
+        }, 1000);
+    }
+    
+    playExplosionSound() {
+        if (!soundEffects.audioContext) return;
+        
+        const oscillator = soundEffects.audioContext.createOscillator();
+        const gainNode = soundEffects.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(soundEffects.audioContext.destination);
+        
+        // Explosion sound - low rumble to high pop
+        oscillator.frequency.setValueAtTime(80, soundEffects.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(400, soundEffects.audioContext.currentTime + 0.1);
+        oscillator.frequency.exponentialRampToValueAtTime(100, soundEffects.audioContext.currentTime + 0.3);
+        
+        gainNode.gain.setValueAtTime(0.3, soundEffects.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, soundEffects.audioContext.currentTime + 0.4);
+        
+        oscillator.start(soundEffects.audioContext.currentTime);
+        oscillator.stop(soundEffects.audioContext.currentTime + 0.4);
     }
     
     showGameOverScreen(reason) {
